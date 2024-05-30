@@ -1,84 +1,156 @@
 // src/PointsClient.ts
-import { PointsData, PointsResult } from './types';
+import { PointsData, PointsResponse, Point, Campaign } from './types';
+
+interface PointsClientParams {
+  apiKey: string;
+  campaignId: string;
+}
 
 export class PointsClient {
-  private apiKey: string;
-  private campaignId: string;
-  private isValid: boolean;
-  private campaign: any;
+  private readonly apiKey: string;
+  private readonly campaignId: string;
+  private isValid: boolean | undefined;
+  private campaign: Campaign | undefined;
+  private readonly baseUrl: string;
 
-  constructor(apiKey: string, campaignId: string) {
+  constructor({ apiKey, campaignId }: PointsClientParams) {
     this.apiKey = apiKey;
     this.campaignId = campaignId;
+    this.baseUrl = "http://localhost:3000/api";
   }
 
-  public async distribute(eventName: string, pointsData: PointsData): Promise<void> {
-    const isValidApiKey = await this.validateApiKey(this.apiKey);
-    if (!isValidApiKey) {
-      throw new Error('Invalid API key');
-    }
-
-    // Check if campaign_id exists, if not create one
-    const isValidCampaignId = await this.validateCampaignId(this.campaignId);
-    if (!isValidCampaignId) {
-      this.campaignId = await this.createCampaignId();
-    }
+  distribute = async (eventName: string, pointsData: PointsData): Promise<boolean> => {
+    await this.verify();
+    if (!this.isValid) throw new Error('Invalid API key');
 
     try {
-      // await createPoint(eventName, pointsData);
-      console.log('Points distributed successfully');
+      const response = await fetch(`${this.baseUrl}/points`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Api-Key': this.apiKey
+        },
+        body: JSON.stringify({
+          eventName,
+          points: pointsData.points,
+          address: pointsData.address,
+          campaignId: this.campaign?.id
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to distribute points');
+      }
+
+      await response.json();
+      return true
     } catch (error) {
       console.error('Error distributing points:', error);
       throw new Error('Failed to distribute points');
     }
   }
 
-  public async getPoints(address: string): Promise<PointsResult[]> {
-    if (!this.apiKey) {
-      throw new Error('Client not initialized with API key');
-    }
+
+  getPoints = async (address: string): Promise<PointsResponse[]> => {
+    await this.verify();
+    if (!this.isValid) throw new Error('Invalid API key');
 
     try {
-      // const points = await getPointsData(address);
-      return points;
+      const response = await fetch(`${this.baseUrl}/points?address=${address}&campaign_id=${this.campaign?.id}`, {
+        method: 'GET',
+        headers: {
+          'Api-Key': this.apiKey
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch points');
+      }
+
+      const { points } = await response.json();
+      return points.map((point: Point) => ({
+        eventName: point.event_name,
+        pointsData: {
+          points: point.points,
+          address: point.address
+        }
+      }));
     } catch (error) {
       console.error('Error getting points:', error);
       throw new Error('Failed to get points');
     }
   }
 
-  public async getPointsByEvent(address: string, eventName: string): Promise<PointsResult[]> {
-    if (!this.apiKey) {
-      throw new Error('Client not initialized with API key');
-    }
+  getPointsByEvent = async (address: string, eventName: string): Promise<PointsResponse[]> => {
+    await this.verify();
+    if (!this.isValid) throw new Error('Invalid API key');
 
     try {
-      // const points = await getPointsByEventName(address, eventName);
-      return points;
+      const response = await fetch(`${this.baseUrl}/points?address=${address}&event_name=${eventName}&campaign_id=${this.campaign?.id}`, {
+        method: 'GET',
+        headers: {
+          'Api-Key': this.apiKey
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch points');
+      }
+
+      const { points } = await response.json();
+      return points.map((point: Point) => ({
+        eventName: point.event_name,
+        pointsData: {
+          points: point.points,
+          address: point.address
+        }
+      }));
     } catch (error) {
       console.error('Error getting points by event:', error);
       throw new Error('Failed to get points by event');
     }
   }
 
-  private async verify(): Promise<boolean> {
-    const myHeaders = new Headers();
-    myHeaders.append("Api-Key", this.apiKey);
-
-    const requestOptions = {
-      method: "GET",
-      headers: myHeaders
-    };
-
-    try {
-      const response = await fetch("http://localhost:3000/api/verify", requestOptions);
-      const result = await response.json();
-      console.log(result);
-    } catch (error) {
-      this.isValid = false;
-      console.error(error);
+  private verify = async (): Promise<void> => {
+    if (this.isValid !== undefined) {
+      return;
     }
 
-    return this.isValid
+    const headers = new Headers();
+    headers.append("Api-Key", this.apiKey);
+
+    try {
+      const projectResponse = await fetch(`${this.baseUrl}/verify`, {
+        method: "GET",
+        headers
+      });
+      if (!projectResponse.ok) {
+        throw new Error('Failed to verify API key');
+      }
+      const { project } = await projectResponse.json();
+      const projectId = project.id;
+
+      const campaignResponse = await fetch(`${this.baseUrl}/campaigns`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Api-Key": this.apiKey
+        },
+        body: JSON.stringify({
+          project_id: projectId,
+          campaign_id: this.campaignId
+        })
+      });
+      if (!campaignResponse.ok) {
+        throw new Error('Failed to verify or create campaign');
+      }
+      const { campaign }: { campaign: Campaign } = await campaignResponse.json();
+      this.campaign = campaign;
+      this.isValid = true;
+    } catch (error) {
+      this.isValid = false;
+      console.error('Verification error:', error);
+      throw error;
+    }
   }
 }

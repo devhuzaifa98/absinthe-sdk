@@ -4,13 +4,19 @@ export interface PointsData {
   address: string;
 }
 
-export interface PointsResult {
+export interface PointsResponse {
   eventName: string;
   pointsData: PointsData;
 }
 
 export interface Point {
-  eventName?: string;
+  event_name?: string;
   points: number;
   address: string;
+}
+
+export interface Campaign {
+  id: number,
+  app_id: string,
+  project_id: number
 }
