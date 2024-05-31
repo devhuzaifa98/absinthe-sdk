@@ -1,25 +1,56 @@
-# Absinthe SDK
+# Absinthe SDK Demo
 
-The Absinthe SDK allows projects to easily interact with the Absinthe Platform to manage and distribute points for their users. This SDK facilitates several functionalities, including the distribution of points, retrieval of points associated with an address, and filtering of points based on event names.
+This guide will walk you through testing the Absinthe SDK by registering for an API key and running a utility app to insert points to an address.
 
-## Features
+## 1. Register and Get API Key
 
-- **Distribute Points**: Assign points to a user based on an event on their EVM-based address.
-- **Get Points**: Retrieve the total points for a specific address.
-- **Get Points by Event**: Retrieve points for a specific address filtered by event name.
+To register and get an API key, you need to send a POST request to the registration endpoint.
 
-## Installation
+### Registration Endpoint
 
-Install the SDK using npm:
+**URL:** `https://absinthe-utility-app.vercel.app/api/register`
 
-`npm install @devhuzaiffa/absinthe-sdk`
+### Request
 
+**Method:** POST
 
-## Usage
+**Body:**
 
-### Initialization
+```json
+{
+  "name": "your-name"
+}
+```
 
-To use the SDK, you need to initialize it with your API key and campaign ID:
+### Example using cURL
+
+```markdown
+curl -X POST https://absinthe-utility-app.vercel.app/api/register \
+-H "Content-Type: application/json" \
+-d '{"name": "your-name"}'
+```
+
+### Response
+
+The response will include an API key. Save this key as it will be used to initialize the PointsClient in the next step.
+
+## 2. Run the Utility App to Insert Points
+
+Next, set up the Next.js app and run the development server. You'll need to insert your API key and campaign ID in the PointsClient initialization.
+
+### App Setup
+
+1. Clone the repository (if not already done).
+
+2. Install dependencies:
+
+```markdown
+npm install
+```
+
+3. Open the file app/components/PointsList.tsx.
+
+4. On line number 30, initialize the PointsClient class like this:
 
 ```markdown
 import PointsClient from "@devhuzaiffa/absinthe-sdk";
@@ -30,46 +61,29 @@ const pointsClient = new PointsClient({
 });
 ```
 
-### Distribute Points
+5. Replace "your-api-key" with the API key you received from the registration step.
 
-To distribute points to an address based on an event:
+6. Replace "your-campaign-id" with your campaign ID.
 
-```markdown
-try {
-  const response = await pointsClient.distribute("event_name", {
-    points: 100,
-    address: "0x123...",
-  });
-  console.log("Points distributed successfully");
-} catch (error) {
-  console.error("Error distributing points:", error);
-}
+### Run the Development Server
+
+Start the development server:
+
+```
+npm run dev
 ```
 
-### Get Points
+Open http://localhost:3000 with your browser to see the result.
 
-To retrieve the total points for a specific address:
+## Using the Utility App
 
-```markdown
-try {
-  const points = await client.getPoints("0x123...");
-  console.log("Points:", points);
-} catch (error) {
-  console.error("Error fetching points:", error);
-}
-```
+On the application page, you will find a form to send points to an address. Below the form, there is a list showing all the events, the points sent, and the addresses.
 
-### Get Points by Event
+### Search Options
 
-To retrieve points for a specific address filtered by event name:
+You can perform searches based on:
 
-```markdown
-try {
-  const points = await client.getPointsByEvent("0x123...", "event_name");
-  console.log("Points by event:", points);
-} catch (error) {
-  console.error("Error fetching points by event:", error);
-}
-```
+- eventName
+- address
 
-
+Enter the desired search criteria and view the filtered results.
