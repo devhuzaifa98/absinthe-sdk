@@ -51,12 +51,17 @@ export class PointsClient {
   }
 
 
-  getPoints = async (address: string): Promise<PointsResponse[]> => {
+  getPoints = async (address?: string): Promise<PointsResponse[]> => {
     await this.verify();
     if (!this.isValid) throw new Error('Invalid API key');
 
     try {
-      const response = await fetch(`${this.baseUrl}/points?address=${address}&campaign_id=${this.campaign?.id}`, {
+      let url = `${this.baseUrl}/points?campaign_id=${this.campaign?.id}`;
+      if (address) {
+        url += `&address=${address}`;
+      }
+
+      const response = await fetch(url, {
         method: 'GET',
         headers: {
           'Api-Key': this.apiKey
