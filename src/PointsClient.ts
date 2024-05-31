@@ -16,7 +16,7 @@ export class PointsClient {
   constructor({ apiKey, campaignId }: PointsClientParams) {
     this.apiKey = apiKey;
     this.campaignId = campaignId;
-    this.baseUrl = "http://localhost:3000/api";
+    this.baseUrl = "https://absinthe-utility-app.vercel.app/api";
   }
 
   distribute = async (eventName: string, pointsData: PointsData): Promise<boolean> => {
